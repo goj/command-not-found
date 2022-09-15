@@ -1,23 +1,26 @@
 {
+  description = "A flake-friendler rewrite of nix command-not-found";
+
   inputs = {
-    dream2nix.url = "github:nix-community/dream2nix";
+    crane = {
+      url = "github:ipetkov/crane";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = {
-    self,
-    dream2nix,
-  } : (dream2nix.lib.makeFlakeOutputs {
-      systems = ["x86_64-linux"];
-      config = {
-        disableIfdWarning = true;
-        projectRoot = ./.;
-      };
-      source = ./.;
-      settings = [
-        {
-          builder = "crane";
-          translator = "cargo-lock";
-        }
-      ];
-    });
+  outputs = { self, nixpkgs, crane, flake-utils, ... }:
+    flake-utils.lib.eachDefaultSystem (system:
+      let
+        pkgs = import nixpkgs { inherit system; };
+        drv = crane.lib.${system}.buildPackage { src = ./.; };
+      in
+      {
+        checks.app-builds = drv;
+        packages.default = drv;
+        apps.default = flake-utils.lib.mkApp { inherit drv; };
+        devShells.default = pkgs.mkShell {
+          inputsFrom = builtins.attrValues self.checks;
+          nativeBuildInputs = with pkgs; [ cargo cargo-watch clippy rust-analyzer rustc ];
+        };
+      });
 }
