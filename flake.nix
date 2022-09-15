@@ -8,7 +8,16 @@
     dream2nix,
   } : (dream2nix.lib.makeFlakeOutputs {
       systems = ["x86_64-linux"];
-      config.projectRoot = ./.;
+      config = {
+        disableIfdWarning = true;
+        projectRoot = ./.;
+      };
       source = ./.;
+      settings = [
+        {
+          builder = "crane";
+          translator = "cargo-lock";
+        }
+      ];
     });
 }
