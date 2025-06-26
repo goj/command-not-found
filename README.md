@@ -1,5 +1,11 @@
 # A `command-not-found` for the new nix CLI
 
+## Installation
+
+```zsh
+nix profile install github:goj/command-not-found
+```
+
 ## Configuration
 
 ### zsh
