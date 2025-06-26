@@ -20,10 +20,9 @@ trait PackageQueries {
 impl PackageQueries for Connection {
     fn select_packages(&self, cmd: &str) -> Result<Vec<String>, sqlite::Error> {
         self.prepare("SELECT package FROM Programs WHERE name=:name AND system=:system")?
-            .bind_by_name(":name", cmd)?
-            .bind_by_name(":system", SYSTEM)?
-            .into_cursor()
-            .map(|row_res| row_res.map(|row| row.get::<String, _>(0)))
+            .into_iter()
+            .bind(&[(":name", cmd), (":system", SYSTEM)][..])?
+            .map(|row_res| row_res.map(|row| row.read::<&str, _>(0).to_owned()))
             .collect()
     }
 }
@@ -80,10 +79,8 @@ mod test {
             system: &str,
         ) -> Result<(), Box<dyn Error>> {
             self.prepare("INSERT INTO Programs VALUES (:name, :package, :system)")?
-                .bind_by_name(":name", name)?
-                .bind_by_name(":package", package)?
-                .bind_by_name(":system", system)?
-                .into_cursor()
+                .into_iter()
+                .bind(&[(":name", name), (":package", package), (":system", system)][..])?
                 .count();
             Ok(())
         }

@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-sqlite = "0.27.0"
+sqlite = "0.37.0"
 
 [package.metadata.nix]
 build = true
