@@ -89,6 +89,7 @@ mod test {
         }
     }
 
+    #[test]
     fn test_select_packages() -> Result<(), Box<dyn Error>> {
         let connection = open_test_db()?;
         connection.add_program("bash", "bash", "x86_64-linux")?;
