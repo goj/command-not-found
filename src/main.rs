@@ -1,5 +1,5 @@
 use sqlite::Connection;
-use std::{env, error::Error, process};
+use std::{env, process};
 
 const DB_PATH: &str = "/nix/var/nix/profiles/per-user/root/channels/nixos/programs.sqlite";
 const SYSTEM: &str = "x86_64-linux";
@@ -28,51 +28,6 @@ impl PackageQueries for Connection {
     }
 }
 
-#[cfg(test)]
-trait TestHelpers {
-    fn add_program(&self, name: &str, package: &str, system: &str) -> Result<(), Box<dyn Error>>;
-}
-
-#[cfg(test)]
-fn open_test_db() -> Result<Connection, Box<dyn Error>> {
-    let connection = sqlite::open(":memory:").expect("Connecting to DB failed");
-    connection.execute("CREATE TABLE Programs (name TEXT, package TEXT, system TEXT)")?;
-    Ok(connection)
-}
-
-#[cfg(test)]
-impl TestHelpers for Connection {
-    fn add_program(
-        self: &Connection,
-        name: &str,
-        package: &str,
-        system: &str,
-    ) -> Result<(), Box<dyn Error>> {
-        self.prepare("INSERT INTO Programs VALUES (:name, :package, :system)")?
-            .bind_by_name(":name", name)?
-            .bind_by_name(":package", package)?
-            .bind_by_name(":system", system)?
-            .into_cursor()
-            .count();
-        Ok(())
-    }
-}
-
-#[test]
-fn test_select_packages() -> Result<(), Box<dyn Error>> {
-    let connection = open_test_db()?;
-    connection.add_program("bash", "bash", "x86_64-linux")?;
-    connection.add_program("bash", "bash-test", "x86_64-linux")?;
-    connection.add_program("zsh", "zsh", "x86_64-linux")?;
-    connection.add_program("bash", "bash-other-system", "i386-fuchsia")?;
-    let packages = connection.select_packages("bash")?;
-    assert!(packages.iter().any(|p| p == "bash"));
-    assert!(packages.iter().any(|p| p == "bash-test"));
-    assert!(!packages.iter().any(|p| p == "zsh"));
-    assert!(!packages.iter().any(|p| p == "bash-other-system"));
-    Ok(())
-}
-
 fn exec_it(argv: &Vec<String>) {
     let cmd = &argv[0];
 
@@ -95,4 +50,56 @@ fn exec_it(argv: &Vec<String>) {
         }
     }
     process::exit(127);
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use std::error::Error;
+
+    trait TestHelpers {
+        fn add_program(
+            &self,
+            name: &str,
+            package: &str,
+            system: &str,
+        ) -> Result<(), Box<dyn Error>>;
+    }
+
+    fn open_test_db() -> Result<Connection, Box<dyn Error>> {
+        let connection = sqlite::open(":memory:").expect("Connecting to DB failed");
+        connection.execute("CREATE TABLE Programs (name TEXT, package TEXT, system TEXT)")?;
+        Ok(connection)
+    }
+
+    impl TestHelpers for Connection {
+        fn add_program(
+            self: &Connection,
+            name: &str,
+            package: &str,
+            system: &str,
+        ) -> Result<(), Box<dyn Error>> {
+            self.prepare("INSERT INTO Programs VALUES (:name, :package, :system)")?
+                .bind_by_name(":name", name)?
+                .bind_by_name(":package", package)?
+                .bind_by_name(":system", system)?
+                .into_cursor()
+                .count();
+            Ok(())
+        }
+    }
+
+    fn test_select_packages() -> Result<(), Box<dyn Error>> {
+        let connection = open_test_db()?;
+        connection.add_program("bash", "bash", "x86_64-linux")?;
+        connection.add_program("bash", "bash-test", "x86_64-linux")?;
+        connection.add_program("zsh", "zsh", "x86_64-linux")?;
+        connection.add_program("bash", "bash-other-system", "i386-fuchsia")?;
+        let packages = connection.select_packages("bash")?;
+        assert!(packages.iter().any(|p| p == "bash"));
+        assert!(packages.iter().any(|p| p == "bash-test"));
+        assert!(!packages.iter().any(|p| p == "zsh"));
+        assert!(!packages.iter().any(|p| p == "bash-other-system"));
+        Ok(())
+    }
 }
