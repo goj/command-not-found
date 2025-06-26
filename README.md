@@ -1,5 +1,7 @@
 # A `command-not-found` for the new nix CLI
 
+[![CI status](https://github.com/goj/command-not-found/workflows/CI/badge.svg)](https://github.com/goj/command-not-found/actions)
+
 ## Installation
 
 ```zsh
